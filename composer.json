@@ -1,0 +1,25 @@
+{
+  "name": "timostamm/php-service",
+  "description": "Helps implementing long-running services in PHP",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Timo Stamm",
+      "email": "ts@timostamm.de"
+    }
+  ],
+  "require": {
+    "php":"^7.1",
+    "symfony/console": "^4.1",
+    "react/event-loop": "^1.0",
+    "react/promise": "^2.7",
+    "psr/log": "^1.0",
+    "doctrine/orm": "^2.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "TS\\PhpService\\": "src/"
+    }
+  }
+}
