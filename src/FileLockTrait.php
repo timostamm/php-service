@@ -9,7 +9,6 @@
 namespace TS\PhpService;
 
 
-use Symfony\Component\Filesystem\Exception\IOException;
 
 trait FileLockTrait
 {
@@ -28,7 +27,8 @@ trait FileLockTrait
         if (flock($fp, LOCK_EX | LOCK_NB)) {
             $this->lockResource = $fp;
         } else {
-            throw new IOException(sprintf('Unable to acquire lock for "%s". This command is already runnning', $ref->getName()), 0, null, $file);
+            $msg = sprintf('Unable to acquire lock for "%s". This command is already runnning', $ref->getName());
+            throw new \RuntimeException($msg);
         }
     }
 

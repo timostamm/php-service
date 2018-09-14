@@ -20,9 +20,6 @@ class ServiceConsoleLogger extends AbstractLogger
 {
 
 
-    private const QUIET_STATE = 'running';
-
-
     /** @var OutputInterface */
     private $std;
 
