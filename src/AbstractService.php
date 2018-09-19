@@ -71,6 +71,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     {
         $this
             ->addOption('run-quiet', null, InputOption::VALUE_NONE, 'Only output messages during start and shutdown')
+            ->addOption('loop', null, InputOption::VALUE_REQUIRED, 'Class name of a specific event loop implementation, for example: ExtEvLoop, StreamSelectLoop. Uses best available implementation if not provided.')
             ->addOption('ignore-sql-logger', null, InputOption::VALUE_NONE)
             ->addOption('remove-sql-logger', null, InputOption::VALUE_NONE)
             ->addOption('mem-limit-warn', null, InputOption::VALUE_REQUIRED, '', $this->getDefaultMemoryLimits()['warn'])
@@ -92,7 +93,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
         $this->logger->add($this->createConsoleLogger($input, $output), $input->getOption('run-quiet'));
         $this->logger->add($this->createLogger());
 
-        $this->loop = $this->createLoop();
+        $this->loop = $this->createLoop($input->getOption('loop'));
 
         $this->acquireLock();
 
@@ -271,9 +272,22 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     }
 
 
-    protected function createLoop(): LoopInterface
+    protected function createLoop(?string $impClassShortName): LoopInterface
     {
-        return Factory::create();
+        if (!$impClassShortName) {
+            return Factory::create();
+        }
+
+        $className = 'React\EventLoop\\' . $impClassShortName;
+        if (!class_exists($className)) {
+            throw new \InvalidArgumentException('Event loop implementation ' . $className . ' not found.');
+        }
+
+        $loop = new $className();
+        if (!$loop instanceof LoopInterface) {
+            throw new \InvalidArgumentException('Event loop implementation ' . $className . ' does not implement ' . LoopInterface::class . '.');
+        }
+        return $loop;
     }
 
 
