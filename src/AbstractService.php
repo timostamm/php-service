@@ -138,22 +138,15 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
             $this->currentState = self::STATE_RUNNING;
 
-            $this->logger->notice('Running.');
+            $this->logger->notice('Running with ' . get_class($this->loop) . '.');
 
             $this->loop->run();
 
         } catch (\Throwable $error) {
 
-            if ($this->currentState === self::STATE_STARTING) {
-                $this->logger->alert('Startup failed: ' . $error->getMessage(), [
-                    'error' => $error
-                ]);
-            } else {
-                $this->logger->alert('Uncaught error: ' . $error->getMessage(), [
-                    'error' => $error
-                ]);
-                $this->exitCode = 1;
-            }
+            $this->logger->alert('Startup failed: ' . $error->getMessage(), [
+                'error' => $error
+            ]);
 
             $this->exitCode = 1;
         }
