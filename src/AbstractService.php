@@ -38,6 +38,12 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     /** @var DoctrineSqlLoggerCheck */
     private $doctrineLoggerCheck;
 
+    /** @var DoctrineSqlKeepAlive */
+    private $doctrineSqlKeepAlive;
+
+    /** @var int */
+    private $sqlReconnectInterval = 3600;
+
     /** @var LoggerInterface */
     private $logger;
 
@@ -60,10 +66,11 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     private $currentState = self::STATE_STARTING;
 
 
-    public function __construct(string $name = null, DoctrineSqlLoggerCheck $doctrineLoggerCheck)
+    public function __construct(string $name = null, DoctrineSqlLoggerCheck $doctrineLoggerCheck, DoctrineSqlKeepAlive $doctrineSqlKeepAlive)
     {
         parent::__construct($name);
         $this->doctrineLoggerCheck = $doctrineLoggerCheck;
+        $this->doctrineSqlKeepAlive = $doctrineSqlKeepAlive;
     }
 
 
@@ -74,6 +81,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
             ->addOption('loop', null, InputOption::VALUE_REQUIRED, 'Class name of a specific event loop implementation, for example: ExtEvLoop, StreamSelectLoop. Uses best available implementation if not provided.')
             ->addOption('ignore-sql-logger', null, InputOption::VALUE_NONE)
             ->addOption('remove-sql-logger', null, InputOption::VALUE_NONE)
+            ->addOption('sql-reconnect-interval', null, InputOption::VALUE_REQUIRED, 'Reset SQL connection every N seconds.', 3600)
             ->addOption('mem-limit-warn', null, InputOption::VALUE_REQUIRED, '', $this->getDefaultMemoryLimits()['warn'])
             ->addOption('mem-limit-hard', null, InputOption::VALUE_REQUIRED, '', $this->getDefaultMemoryLimits()['hard'])
             ->addOption('mem-leak-limit', null, InputOption::VALUE_REQUIRED, '', $this->getDefaultMemoryLimits()['leak']);
@@ -107,6 +115,8 @@ abstract class AbstractService extends Command implements ShutdownableInterface
             $this->doctrineLoggerCheck
         );
 
+        $this->sqlReconnectInterval = (int)$input->getOption('sql-reconnect-interval');
+
         $this->watchMemory(
             $this,
             (int)$input->getOption('mem-limit-warn'),
@@ -136,6 +146,8 @@ abstract class AbstractService extends Command implements ShutdownableInterface
         try {
 
             $this->onStart($input, $this->loop, $this->logger);
+
+            $this->doctrineSqlKeepAlive->attach($this->loop, $this->sqlReconnectInterval);
 
             $this->currentState = self::STATE_RUNNING;
 
@@ -217,6 +229,8 @@ abstract class AbstractService extends Command implements ShutdownableInterface
         ]);
 
         $this->shutdownPromise = $this->onShutdown($signal);
+
+        $this->doctrineSqlKeepAlive->detach($this->loop);
 
         $this->shutdownPromise->then(function ($exitCode) {
 
