@@ -88,6 +88,7 @@ class DoctrineSqlKeepAlive
                 $connections[] = $conn;
             }
         }
+        return $connections;
     }
 
 
