@@ -52,28 +52,34 @@ class ServiceConsoleLogger extends AbstractLogger
 
 
     /** @var bool */
-    private $forHumans = true;
+    private $useColors = true;
 
-    public function __construct(OutputInterface $output, bool $inputIsInteractive)
+    /** @var bool */
+    private $showDate = false;
+
+
+    public function __construct(OutputInterface $output)
     {
         $this->std = $output;
         $this->err = $output instanceof ConsoleOutputInterface ? $output->getErrorOutput() : $output;
 
-        $this->forHumans = $inputIsInteractive && $output->isDecorated();
-
-        //$this->forHumans = false;
-
-        if ($this->forHumans) {
-            $stdFormatter = $this->std->getFormatter();
-            $errFormatter = $this->err->getFormatter();
-            foreach ($this->styles as $level => list($prefix, $fg, $bg, $opt)) {
-                $stdFormatter->setStyle($level, new OutputFormatterStyle($fg, $bg, $opt));
-                $errFormatter->setStyle($level, new OutputFormatterStyle($fg, $bg, $opt));
-            }
-        } else {
-            $this->std->setDecorated(false);
-            $this->err->setDecorated(false);
+        $stdFormatter = $this->std->getFormatter();
+        $errFormatter = $this->err->getFormatter();
+        foreach ($this->styles as $level => list($prefix, $fg, $bg, $opt)) {
+            $stdFormatter->setStyle($level, new OutputFormatterStyle($fg, $bg, $opt));
+            $errFormatter->setStyle($level, new OutputFormatterStyle($fg, $bg, $opt));
         }
+    }
+
+
+    public function setUseColors(bool $useColors): void
+    {
+        $this->useColors = $useColors;
+    }
+
+    public function setShowDate(bool $showDate): void
+    {
+        $this->showDate = $showDate;
     }
 
 
@@ -90,22 +96,19 @@ class ServiceConsoleLogger extends AbstractLogger
         $out = in_array($level, [LogLevel::EMERGENCY, LogLevel::ALERT, LogLevel::CRITICAL, LogLevel::ERROR])
             ? $this->err : $this->std;
 
-        $verbosity = $this->verbosities[$level];
-
         $message = $this->interpolate($message, $context);
 
-        if ($this->forHumans) {
-
-            $message = $this->styles[$level][0] . $message;
-            $message = sprintf('<%1$s>%2$s</%1$s>', $level, $message);
-            $out->writeln($message, $verbosity);
-
-        } else {
-
-            $message = sprintf('[%s] %s: %s', date('Y-m-d H:i:s'), strtoupper($level), $message);
-            $out->writeln($message, $verbosity);
-
+        $str = '';
+        if ($this->showDate) {
+            $str .= sprintf('[%s] ', date('Y-m-d H:i:s'));
         }
+        if ($this->useColors) {
+            $str .= sprintf('<%1$s>%2$s</%1$s>', $level, $message);
+        } else {
+            $str .= sprintf('%s: %s', strtoupper($level), $message);
+        }
+
+        $out->writeln($str, $this->verbosities[$level]);
     }
 
 

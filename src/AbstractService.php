@@ -131,7 +131,9 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
     protected function createConsoleLogger(InputInterface $input, OutputInterface $output): LoggerInterface
     {
-        return new ServiceConsoleLogger($output, $input->isInteractive());
+        $logger = new ServiceConsoleLogger($output);
+        $logger->setUseColors($input->isInteractive() && $output->isDecorated());
+        return $logger;
     }
 
 
@@ -149,9 +151,9 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
             $this->doctrineSqlKeepAlive->attach($this->loop, $this->sqlReconnectInterval);
 
-            $this->currentState = self::STATE_RUNNING;
-
             $this->logger->notice('Running with ' . get_class($this->loop) . '.');
+
+            $this->currentState = self::STATE_RUNNING;
 
             $this->loop->run();
 
