@@ -77,7 +77,6 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     protected function configure()
     {
         $this
-            ->addOption('run-quiet', null, InputOption::VALUE_NONE, 'Only output messages during start and shutdown')
             ->addOption('loop', null, InputOption::VALUE_REQUIRED, 'Class name of a specific event loop implementation, for example: ExtEvLoop, StreamSelectLoop. Uses best available implementation if not provided.')
             ->addOption('ignore-sql-logger', null, InputOption::VALUE_NONE)
             ->addOption('remove-sql-logger', null, InputOption::VALUE_NONE)
@@ -88,17 +87,10 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     }
 
 
-    protected function createLogger(): LoggerInterface
-    {
-        return new NullLogger();
-    }
-
-
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
-
-        $this->logger = new ServiceLogger($this->currentState, [self::STATE_RUNNING]);
-        $this->logger->add($this->createConsoleLogger($input, $output), $input->getOption('run-quiet'));
+        $this->logger = new DelegatingLogger();
+        $this->logger->add($this->createConsoleLogger($input, $output));
         $this->logger->add($this->createLogger());
 
         $this->loop = $this->createLoop($input->getOption('loop'));
@@ -126,6 +118,29 @@ abstract class AbstractService extends Command implements ShutdownableInterface
             $this->logger
         );
 
+    }
+
+
+    /**
+     * Override this methods to attach your own logger.
+     *
+     * AbstractService creates a delegating logger that
+     * delegates all logs to a ServiceConsoleLogger.
+     *
+     * The logger you provide in this methods will be
+     * added in addition to the ServiceConsoleLogger.
+     *
+     * You only need to override this method if you
+     * want to log to a different target.
+     *
+     * If you do not want console output, override
+     * createConsoleLogger() and return a NullLogger.
+     *
+     * @return LoggerInterface
+     */
+    protected function createLogger(): LoggerInterface
+    {
+        return new NullLogger();
     }
 
 
