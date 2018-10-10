@@ -111,9 +111,9 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
         $this->watchMemory(
             $this,
-            (int)$input->getOption('mem-limit-warn'),
-            (int)$input->getOption('mem-limit-hard'),
-            (int)$input->getOption('mem-leak-limit'),
+            $input->getOption('mem-limit-warn'),
+            $input->getOption('mem-limit-hard'),
+            $input->getOption('mem-leak-limit'),
             $this->loop,
             $this->logger
         );
