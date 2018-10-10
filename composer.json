@@ -21,5 +21,13 @@
     "psr-4": {
       "TS\\PhpService\\": "src/"
     }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "TS\\PhpService\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^7.4"
   }
 }

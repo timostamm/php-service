@@ -16,7 +16,12 @@ use React\EventLoop\TimerInterface;
 class MemoryWatcher
 {
 
+    /** @var int */
     const MB = 1024 * 1024;
+
+    const DEFAULT_MEMORY_LIMIT_WARN = '256mb';
+    const DEFAULT_MEMORY_LIMIT_HARD = '320mb';
+    const DEFAULT_LEAK_DETECTION_LIMIT = '64mb';
 
 
     /** @var LoopInterface */
@@ -44,13 +49,13 @@ class MemoryWatcher
     private $checkInterval = 10;
 
     /** @var int */
-    private $memoryLimitWarn = self::MB * 256;
+    private $memoryLimitWarn;
 
     /** @var int */
-    private $memoryLimitHard = self::MB * 320;
+    private $memoryLimitHard;
 
     /** @var int */
-    private $leakDetectionLimit = self::MB * 64;
+    private $leakDetectionLimit;
 
     /** @var bool */
     private $leakDetected = false;
@@ -67,6 +72,7 @@ class MemoryWatcher
     public function __construct(MemoryWatcherListenerInterface $listener)
     {
         $this->listener = $listener;
+        $this->setLimits();
     }
 
 
@@ -85,14 +91,55 @@ class MemoryWatcher
     }
 
 
-    public function setLimits(int $memoryLimitWarn = self::MB * 256, $memoryLimitHard = self::MB * 320, int $leakDetectionLimit = self::MB * 64)
+    /**
+     * @param int|string $memoryLimitWarn
+     * @param int|string $memoryLimitHard
+     * @param int|string $leakDetectionLimit
+     */
+    public function setLimits(
+        $memoryLimitWarn = self::DEFAULT_MEMORY_LIMIT_WARN,
+        $memoryLimitHard = self::DEFAULT_MEMORY_LIMIT_HARD,
+        $leakDetectionLimit = self::DEFAULT_LEAK_DETECTION_LIMIT
+    )
     {
         if ($this->attached) {
             throw new \LogicException('Already attached.');
         }
-        $this->memoryLimitWarn = $memoryLimitWarn;
-        $this->memoryLimitHard = $memoryLimitHard;
-        $this->leakDetectionLimit = $leakDetectionLimit;
+        $this->memoryLimitWarn = $this->parseBytes($memoryLimitWarn);
+        $this->memoryLimitHard = $this->parseBytes($memoryLimitHard);
+        $this->leakDetectionLimit = $this->parseBytes($leakDetectionLimit);
+    }
+
+    /**
+     * @param int | string $val
+     * @return int
+     */
+    private function parseBytes($val): int
+    {
+        if (is_int($val)) {
+            return $val;
+        }
+        if (is_string($val)) {
+
+            preg_match('/^([0-9]+)([a-zA-Z]+)$/', $val, $matches);
+            if (count($matches) !== 3) {
+                throw new \InvalidArgumentException('Invalid value ' . $val);
+            }
+
+            $amount = (int)$matches[1];
+            $unit = strtolower($matches[2]);
+
+            if ($unit === 'm' || $unit === 'mb') {
+                $bytes = $amount * 1024 * 1024;
+            } else if ($unit === 'k' || $unit === 'kb') {
+                $bytes = $amount * 1024;
+            } else if ($unit === 'b') {
+                $bytes = $amount;
+            } else {
+                throw new \InvalidArgumentException('Unknown unit ' . $unit . ' for value ' . $val);
+            }
+            return $bytes;
+        }
     }
 
 

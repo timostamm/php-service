@@ -42,7 +42,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     private $doctrineSqlKeepAlive;
 
     /** @var int */
-    private $sqlReconnectInterval = 3600;
+    private $sqlReconnectInterval;
 
     /** @var LoggerInterface */
     private $logger;
@@ -166,9 +166,9 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
             $this->doctrineSqlKeepAlive->attach($this->loop, $this->sqlReconnectInterval);
 
-            $this->logger->notice('Running with ' . get_class($this->loop) . '.');
-
             $this->currentState = self::STATE_RUNNING;
+
+            $this->logger->notice('Running with ' . get_class($this->loop) . '.');
 
             $this->loop->run();
 
@@ -296,9 +296,9 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     protected function getDefaultMemoryLimits(): array
     {
         return [
-            'warn' => MemoryWatcher::MB * 256,
-            'hard' => MemoryWatcher::MB * 320,
-            'leak' => 0
+            'warn' => MemoryWatcher::DEFAULT_MEMORY_LIMIT_WARN,
+            'hard' => MemoryWatcher::DEFAULT_MEMORY_LIMIT_HARD,
+            'leak' => MemoryWatcher::DEFAULT_LEAK_DETECTION_LIMIT
         ];
     }
 
