@@ -34,20 +34,23 @@ class MemoryWatcher
     /** @var int */
     private $settleMem;
 
+    /** @var bool */
+    private $settled = false;
+
     /** @var TimerInterface */
     private $checkTimer;
 
     /** @var int */
-    private $checkInterval = 60;
+    private $checkInterval = 10;
 
     /** @var int */
-    private $memoryLimitWarn;
+    private $memoryLimitWarn = self::MB * 256;
 
     /** @var int */
-    private $memoryLimitHard;
+    private $memoryLimitHard = self::MB * 320;
 
     /** @var int */
-    private $leakDetectionLimit;
+    private $leakDetectionLimit = self::MB * 64;
 
     /** @var bool */
     private $leakDetected = false;
@@ -61,12 +64,24 @@ class MemoryWatcher
     private $listener;
 
 
-    public function __construct(MemoryWatcherListenerInterface $listener, int $memoryLimitWarn = self::MB * 256, $memoryLimitHard = self::MB * 320, int $leakDetectionLimit = self::MB * 64)
+    public function __construct(MemoryWatcherListenerInterface $listener)
     {
         $this->listener = $listener;
-        $this->memoryLimitWarn = $memoryLimitWarn;
-        $this->memoryLimitHard = $memoryLimitHard;
-        $this->leakDetectionLimit = $leakDetectionLimit;
+    }
+
+
+    public function getCheckInterval(): int
+    {
+        return $this->checkInterval;
+    }
+
+
+    public function setCheckInterval(int $checkInterval): void
+    {
+        if ($this->attached) {
+            throw new \LogicException('Already attached.');
+        }
+        $this->checkInterval = $checkInterval;
     }
 
 
@@ -81,6 +96,22 @@ class MemoryWatcher
     }
 
 
+    public function getMemoryLimitWarn(): int
+    {
+        return $this->memoryLimitWarn;
+    }
+
+    public function getMemoryLimitHard(): int
+    {
+        return $this->memoryLimitHard;
+    }
+
+    public function getLeakDetectionLimit(): int
+    {
+        return $this->leakDetectionLimit;
+    }
+
+
     public function attach(LoopInterface $loop): void
     {
         if ($this->attached) {
@@ -91,17 +122,18 @@ class MemoryWatcher
         $loop->addTimer($this->settleDelay, function () {
             $this->settle();
         });
+        $this->checkTimer = $this->loop->addPeriodicTimer($this->checkInterval, function () {
+            $this->check();
+        });
     }
 
 
     protected function settle(): void
     {
-        $this->settleTimestamp = time();
         gc_collect_cycles();
+        $this->settleTimestamp = time();
         $this->settleMem = memory_get_usage();
-        $this->checkTimer = $this->loop->addPeriodicTimer($this->checkInterval, function () {
-            $this->check();
-        });
+        $this->settled = true;
     }
 
 
@@ -109,7 +141,6 @@ class MemoryWatcher
     {
         gc_collect_cycles();
         $mem = memory_get_usage();
-        $grow = $mem - $this->settleMem;
 
         if ($this->memoryLimitWarn > 0 && !$this->limitWarnReached && $mem > $this->memoryLimitWarn) {
             $this->limitWarnReached = true;
@@ -121,14 +152,18 @@ class MemoryWatcher
             $this->onMemLimitHard($mem);
         }
 
-        if ($this->leakDetectionLimit > 0 && !$this->leakDetected && $grow > $this->leakDetectionLimit) {
-            $this->leakDetected = true;
-            $durSeconds = time() - $this->settleTimestamp;
-            $this->onLeakDetected($this->settleMem, $mem, $grow, $durSeconds);
-        }
+        if ($this->settled) {
+            $grow = $mem - $this->settleMem;
 
-        if ($this->leakDetected && $this->limitWarnReached && $this->limitHardReached) {
-            $this->loop->cancelTimer($this->checkTimer);
+            if ($this->leakDetectionLimit > 0 && !$this->leakDetected && $grow > $this->leakDetectionLimit) {
+                $this->leakDetected = true;
+                $durSeconds = time() - $this->settleTimestamp;
+                $this->onLeakDetected($this->settleMem, $mem, $grow, $durSeconds);
+            }
+
+            if ($this->leakDetected && $this->limitWarnReached && $this->limitHardReached) {
+                $this->loop->cancelTimer($this->checkTimer);
+            }
         }
     }
 

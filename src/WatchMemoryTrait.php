@@ -49,7 +49,8 @@ trait WatchMemoryTrait
 
         };
 
-        $watcher = new MemoryWatcher($listener, $limitWarn, $limitHard, $limitLeak);
+        $watcher = new MemoryWatcher($listener);
+        $watcher->setLimits($limitWarn, $limitHard, $limitLeak);
         $watcher->attach($loop);
     }
 
