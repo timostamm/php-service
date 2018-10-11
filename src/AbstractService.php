@@ -190,6 +190,18 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     abstract protected function onStart(InputInterface $input, LoopInterface $loop, LoggerInterface $serviceLogger): void;
 
 
+    final protected function getLogger(): LoggerInterface
+    {
+        return $this->logger;
+    }
+
+
+    final protected function getLoop(): LoopInterface
+    {
+        return $this->loop;
+    }
+
+
     /**
      *
      * This method is called on shutdown and has some time to
@@ -214,7 +226,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     }
 
 
-    public function shutdown(int $signal = 0): void
+    final public function shutdown(int $signal = 0): void
     {
         if ($this->currentState === self::STATE_SHUT_DOWN) {
 
