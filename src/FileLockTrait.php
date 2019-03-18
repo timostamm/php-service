@@ -9,7 +9,6 @@
 namespace TS\PhpService;
 
 
-
 trait FileLockTrait
 {
 
@@ -18,10 +17,14 @@ trait FileLockTrait
     private $lockResource;
 
 
-    protected function acquireLock(): void
+    protected function acquireLock(string $lockfile = null): void
     {
-        $ref = new \ReflectionClass($this);
-        $file = $ref->getFileName();
+        if (is_string($lockfile)) {
+            $file = $lockfile;
+        } else {
+            $ref = new \ReflectionClass($this);
+            $file = $ref->getFileName();
+        }
 
         $fp = fopen($file, 'r');
         if (flock($fp, LOCK_EX | LOCK_NB)) {

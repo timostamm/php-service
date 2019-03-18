@@ -81,6 +81,8 @@ abstract class AbstractService extends Command implements ShutdownableInterface
             ->addOption('ignore-sql-logger', null, InputOption::VALUE_NONE)
             ->addOption('remove-sql-logger', null, InputOption::VALUE_NONE)
             ->addOption('sql-reconnect-interval', null, InputOption::VALUE_REQUIRED, 'Reset SQL connection every N seconds.', 3600)
+            ->addOption('dont-lock', null, InputOption::VALUE_NONE, 'Do not use exclusive file lock.')
+            ->addOption('lock-file', null, InputOption::VALUE_REQUIRED, 'Path to be used as lock file. If not set, the class file of the command is used.')
             ->addOption('mem-limit-warn', null, InputOption::VALUE_REQUIRED, '', $this->getDefaultMemoryLimits()['warn'])
             ->addOption('mem-limit-hard', null, InputOption::VALUE_REQUIRED, '', $this->getDefaultMemoryLimits()['hard'])
             ->addOption('mem-leak-limit', null, InputOption::VALUE_REQUIRED, '', $this->getDefaultMemoryLimits()['leak']);
@@ -95,7 +97,9 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
         $this->loop = $this->createLoop($input->getOption('loop'));
 
-        $this->acquireLock();
+        if ($input->getOption('dont-lock') !== true) {
+            $this->acquireLock($input->getOption('lock-file'));
+        }
 
         $this->addShutdownSignal(SIGINT);
         $this->addShutdownSignal(SIGTERM);
