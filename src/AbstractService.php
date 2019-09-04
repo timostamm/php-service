@@ -9,6 +9,8 @@
 namespace TS\PhpService;
 
 
+use InvalidArgumentException;
+use LogicException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use React\EventLoop\Factory;
@@ -20,6 +22,7 @@ use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 use function React\Promise\resolve;
 
 
@@ -176,9 +179,9 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
             $this->loop->run();
 
-        } catch (\Throwable $error) {
+        } catch (Throwable $error) {
 
-            $this->logger->alert('Startup failed: ' . $error->getMessage(), [
+            $this->logger->alert('Startup failed: {error}', [
                 'error' => $error
             ]);
 
@@ -251,7 +254,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
 
         if ($this->currentState !== self::STATE_RUNNING) {
-            throw new \LogicException('shutdown() called while state = ' . $this->currentState);
+            throw new LogicException('shutdown() called while state = ' . $this->currentState);
         }
 
 
@@ -271,9 +274,9 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
         }, function ($error) {
 
-            if ($error instanceof \Throwable) {
+            if ($error instanceof Throwable) {
 
-                $this->logger->error('Shutdown routine failed: ' . $error->getMessage(), [
+                $this->logger->error('Shutdown routine failed: {error}', [
                     'error' => $error
                 ]);
 
@@ -327,12 +330,12 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
         $className = 'React\EventLoop\\' . $impClassShortName;
         if (!class_exists($className)) {
-            throw new \InvalidArgumentException('Event loop implementation ' . $className . ' not found.');
+            throw new InvalidArgumentException('Event loop implementation ' . $className . ' not found.');
         }
 
         $loop = new $className();
         if (!$loop instanceof LoopInterface) {
-            throw new \InvalidArgumentException('Event loop implementation ' . $className . ' does not implement ' . LoopInterface::class . '.');
+            throw new InvalidArgumentException('Event loop implementation ' . $className . ' does not implement ' . LoopInterface::class . '.');
         }
         return $loop;
     }
@@ -356,7 +359,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
     final public function setCode(callable $code)
     {
-        throw new \LogicException('not supported');
+        throw new LogicException('not supported');
     }
 
 
