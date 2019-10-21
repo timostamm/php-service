@@ -17,18 +17,16 @@ trait MonologCheckTrait
 
         if ($clearHandlers) {
             $check->clearMonologHandlersAndProcessors();
-            $done[] = 'Cleared Monolog handlers and processors.';
-            return;
+            $done[] = 'Cleared handlers and processors.';
         }
 
         if ($redirect) {
             $check->redirectMonolog($serviceConsoleLogger);
-            $done[] = 'Redirecting Monolog to console.';
-            return;
+            $done[] = 'Redirecting to console.';
         }
 
         if (count($done) > 0) {
-            $serviceConsoleLogger->info(join(' ', $done));
+            $serviceConsoleLogger->warning('Monolog: ' . join(' ', $done));
         }
     }
 
