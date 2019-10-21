@@ -11,7 +11,6 @@ namespace TS\PhpService;
 
 use InvalidArgumentException;
 use LogicException;
-use Psr\Log\LoggerInterface;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Promise\CancellablePromiseInterface;
@@ -32,6 +31,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     use FileLockTrait;
     use CheckSqlLoggerTrait;
     use WatchMemoryTrait;
+    use MonologCheckTrait;
 
 
     /** @var LoopInterface */
@@ -45,6 +45,11 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
     /** @var int */
     private $sqlReconnectInterval;
+
+
+    /** @var MonologCheck */
+    private $monologCheck;
+
 
     /**
      * Logs only to the console output.
@@ -72,11 +77,12 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     private $currentState = self::STATE_STARTING;
 
 
-    public function __construct(string $name = null, DoctrineSqlLoggerCheck $doctrineLoggerCheck, DoctrineSqlKeepAlive $doctrineSqlKeepAlive)
+    public function __construct(string $name = null, DoctrineSqlLoggerCheck $doctrineLoggerCheck, DoctrineSqlKeepAlive $doctrineSqlKeepAlive, MonologCheck $monologCheck)
     {
         parent::__construct($name);
         $this->doctrineLoggerCheck = $doctrineLoggerCheck;
         $this->doctrineSqlKeepAlive = $doctrineSqlKeepAlive;
+        $this->monologCheck = $monologCheck;
     }
 
 
@@ -126,6 +132,8 @@ abstract class AbstractService extends Command implements ShutdownableInterface
             $this->logger
         );
 
+        $this->checkMonolog(true, true, $this->logger);
+
     }
 
 
@@ -172,10 +180,10 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     }
 
 
-    abstract protected function onStart(InputInterface $input, LoopInterface $loop, LoggerInterface $serviceLogger): void;
+    abstract protected function onStart(InputInterface $input, LoopInterface $loop, ServiceConsoleLogger $serviceLogger): void;
 
 
-    final protected function getLogger(): LoggerInterface
+    final protected function getLogger(): ServiceConsoleLogger
     {
         return $this->logger;
     }
