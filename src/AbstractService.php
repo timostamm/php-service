@@ -132,7 +132,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
             $this->logger
         );
 
-        $this->checkMonolog(true, true, $this->logger);
+        $this->checkMonolog(true, true, $this->logger, $this->monologCheck);
 
     }
 
