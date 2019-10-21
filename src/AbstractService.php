@@ -12,7 +12,6 @@ namespace TS\PhpService;
 use InvalidArgumentException;
 use LogicException;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Promise\CancellablePromiseInterface;
@@ -47,7 +46,11 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     /** @var int */
     private $sqlReconnectInterval;
 
-    /** @var LoggerInterface */
+    /**
+     * Logs only to the console output.
+     * To output every log message up to DEBUG, run command with -vvv
+     * @var ServiceConsoleLogger
+     */
     private $logger;
 
     /** @var PromiseInterface */
@@ -94,9 +97,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
 
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
-        $this->logger = new DelegatingLogger();
-        $this->logger->add($this->createConsoleLogger($input, $output));
-        $this->logger->add($this->createLogger());
+        $this->logger = $this->createConsoleLogger($input, $output);
 
         $this->loop = $this->createLoop($input->getOption('loop'));
 
@@ -128,30 +129,7 @@ abstract class AbstractService extends Command implements ShutdownableInterface
     }
 
 
-    /**
-     * Override this methods to attach your own logger.
-     *
-     * AbstractService creates a delegating logger that
-     * delegates all logs to a ServiceConsoleLogger.
-     *
-     * The logger you provide in this methods will be
-     * added in addition to the ServiceConsoleLogger.
-     *
-     * You only need to override this method if you
-     * want to log to a different target.
-     *
-     * If you do not want console output, override
-     * createConsoleLogger() and return a NullLogger.
-     *
-     * @return LoggerInterface
-     */
-    protected function createLogger(): LoggerInterface
-    {
-        return new NullLogger();
-    }
-
-
-    protected function createConsoleLogger(InputInterface $input, OutputInterface $output): LoggerInterface
+    protected function createConsoleLogger(InputInterface $input, OutputInterface $output): ServiceConsoleLogger
     {
         $logger = new ServiceConsoleLogger($output);
         $logger->setUseColors($input->isInteractive() && $output->isDecorated());
