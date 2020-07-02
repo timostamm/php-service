@@ -11,6 +11,8 @@ namespace TS\PhpService;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 
 
 class DoctrineSqlLoggerCheck
@@ -31,6 +33,63 @@ class DoctrineSqlLoggerCheck
         if ($doctrineRegistry) {
             $this->addRegistry($doctrineRegistry);
         }
+    }
+
+
+    /**
+     * Apply Doctrine SQL logger checks.
+     *
+     * @param bool $remove whether to remove SQL loggers from all entity managers.
+     * @param bool $ignore whether to ignore SQL loggers.
+     * @param LoggerInterface|OutputInterface|null $output log info about what was done to this logger our output
+     */
+    public function apply(bool $remove, bool $ignore, $output = null): void
+    {
+        if ($remove && $ignore) {
+            throw new \InvalidArgumentException('You cannot ignore and remove at the same time.');
+        }
+
+        if (!$this->hasOffenses()) {
+            return;
+        }
+
+        if ($ignore) {
+            $offendingNames = $this->getOffendingManagerNames();
+            $msg = 'Ignoring ' . count($offendingNames) . ' Entity Managers with an SQL logger. You will have a memory leak.';
+            if ($output instanceof LoggerInterface) {
+                $output->warning($msg, [
+                    'offending_managers' => $offendingNames
+                ]);
+            } else if ($output instanceof OutputInterface) {
+                $output->writeln($msg);
+                foreach ($offendingNames as $name) {
+                    $output->writeln('- ' . $name);
+                }
+            }
+            return;
+        }
+
+        if ($remove) {
+
+            $this->removeSqlLoggers();
+
+            $offendingNames = $this->getOffendingManagerNames();
+            $msg = 'Removed SQL loggers from ' . count($offendingNames) . ' Entity Managers to prevent memory leaks.';
+            if ($output instanceof LoggerInterface) {
+                $output->warning($msg, [
+                    'offending_managers' => $offendingNames
+                ]);
+            } else if ($output instanceof OutputInterface) {
+                $output->writeln($msg);
+                foreach ($offendingNames as $name) {
+                    $output->writeln('- ' . $name);
+                }
+            }
+            return;
+        }
+
+        $msg = $this->getOffenseMessage() . ' If you are sure that this is okay, run this command with the flag --ignore-sql-logger or use --remove-sql-logger.';
+        throw new \InvalidArgumentException($msg);
     }
 
 
