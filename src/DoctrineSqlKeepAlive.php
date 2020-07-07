@@ -19,13 +19,22 @@ use React\EventLoop\TimerInterface;
 class DoctrineSqlKeepAlive
 {
 
+    /** @var int */
+    private $startTimestamp;
+
+    /** @var int */
+    private $interval = 3600;
+
     /** @var ManagerRegistry[] */
     private $registries;
 
     /** @var EntityManagerInterface[] */
     private $ems;
 
-    /** @var TimerInterface */
+    /**
+     * @deprecated
+     * @var TimerInterface
+     */
     private $timer;
 
 
@@ -36,6 +45,18 @@ class DoctrineSqlKeepAlive
         if ($doctrineRegistry) {
             $this->addRegistry($doctrineRegistry);
         }
+        $this->startTimestamp = time();
+    }
+
+
+    public function getInterval(): int
+    {
+        return $this->interval;
+    }
+
+    public function setInterval(int $interval): void
+    {
+        $this->interval = $interval;
     }
 
 
@@ -51,17 +72,12 @@ class DoctrineSqlKeepAlive
     }
 
 
-    public function attach(LoopInterface $loop, int $interval = 3600): void
-    {
-        $this->timer = $loop->addPeriodicTimer($interval, function () {
+    public function reconnectIfRequired(): void {
+        $now = time();
+        if ($this->startTimestamp + $this->interval > $now) {
             $this->reconnect();
-        });
-    }
-
-
-    public function detach(LoopInterface $loop): void
-    {
-        $loop->cancelTimer($this->timer);
+            $this->startTimestamp = $now;
+        }
     }
 
 
@@ -71,6 +87,26 @@ class DoctrineSqlKeepAlive
             $conn->close();
             $conn->connect();
         }
+    }
+
+
+
+    /**
+     * @deprecated
+     */
+    public function attach(LoopInterface $loop, int $interval = 3600): void
+    {
+        $this->timer = $loop->addPeriodicTimer($interval, function () {
+            $this->reconnect();
+        });
+    }
+
+    /**
+     * @deprecated
+     */
+    public function detach(LoopInterface $loop): void
+    {
+        $loop->cancelTimer($this->timer);
     }
 
 
