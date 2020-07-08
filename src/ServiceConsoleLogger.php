@@ -9,6 +9,8 @@
 namespace TS\PhpService;
 
 
+use InvalidArgumentException;
+use LogicException;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LogLevel;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
@@ -58,7 +60,15 @@ class ServiceConsoleLogger extends AbstractLogger
     private $showDate = false;
 
 
-    public function __construct(OutputInterface $output)
+    public function __construct(OutputInterface $output = null)
+    {
+        if ($output) {
+            $this->setConsole($output);
+        }
+    }
+
+
+    public function setConsole(OutputInterface $output)
     {
         $this->std = $output;
         $this->err = $output instanceof ConsoleOutputInterface ? $output->getErrorOutput() : $output;
@@ -88,8 +98,12 @@ class ServiceConsoleLogger extends AbstractLogger
      */
     public function log($level, $message, array $context = array())
     {
+        if (!$this->std) {
+            throw new LogicException('Missing console output. You have to provide a console output either in the constructor or with a setConsole() call.');
+        }
+
         if (!isset($this->verbosities[$level])) {
-            throw new \InvalidArgumentException(sprintf('Invalid log level "%s".', $level));
+            throw new InvalidArgumentException(sprintf('Invalid log level "%s".', $level));
         }
 
         // std out or err out?
@@ -113,10 +127,10 @@ class ServiceConsoleLogger extends AbstractLogger
 
 
     /**
-     * @author PHP Framework Interoperability Group
      * @param string $message
      * @param array $context
      * @return string
+     * @author PHP Framework Interoperability Group
      */
     private function interpolate(string $message, array $context): string
     {
